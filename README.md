@@ -66,9 +66,29 @@ Here’s an improved version of the README.md file that incorporates the new con
 - 在编辑器中输入要测试的 XPath 表达式，例如：
 
 
-  //book[price>35]/title
+  //book[price>35]/title/text()
 
 
+
+- 底层使用 elementpath XPath 库，支持 XPath 3.1 表达式。
+  
+- 扩展部分 XQuery 功能， for 循环，例如：
+
+
+  for $book in //book[price>35]
+     return ($book/price/text(), $book/title/text())
+
+
+
+- 多重循环请用 XPath 2.0+ 函数式写法，例如：
+
+
+  for $book in //book
+     return (
+        for $price in $book/price
+           return ($price/text(), $book/title/text())
+
+  
 
 - 将要查询的 XML/HTML 文档粘贴或加载到左侧面板，点击 `Evaluate` 或相应按钮查看匹配节点。
 
@@ -111,3 +131,4 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 
 This version maintains the original structure while integrating the new content seamlessly. It provides a clear overview of the project, its features, installation instructions, and usage guidelines, making it easy for users to understand and contribute to the project.
+
