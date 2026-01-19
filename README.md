@@ -65,6 +65,8 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 ## 使用说明（基础示例）
 
+- 点击 `浏览...` 加载 XML/HTML 文档。
+
 - 在编辑器中输入要测试的 XPath 表达式，例如：
 
   ```xpath
@@ -93,9 +95,11 @@ Here’s an improved version of the README.md file that incorporates the new con
   ```
   
 
-- 将要查询的 XML/HTML 文档粘贴或加载到左侧面板，点击 `Evaluate` 或相应按钮查看匹配节点。
+- 将要查询的 XML/HTML 文档加载后，点击 `执行 XPath` 或相应按钮查看匹配结果。
 
-- 支持导入/导出会话（在菜单或工具栏中查找）
+- 设置列数可以转换为二维数组。
+
+- 支持导入/导出会话（在菜单或工具栏中查找）。
 
 ## 测试
 
@@ -134,6 +138,7 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 
 This version maintains the original structure while integrating the new content seamlessly. It provides a clear overview of the project, its features, installation instructions, and usage guidelines, making it easy for users to understand and contribute to the project.
+
 
 
 
