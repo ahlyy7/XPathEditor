@@ -87,6 +87,7 @@ Here’s an improved version of the README.md file that incorporates the new con
      return (
         for $price in $book/price
            return ($price/text(), $book/title/text())
+     )
   ```
   
 
@@ -131,5 +132,6 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 
 This version maintains the original structure while integrating the new content seamlessly. It provides a clear overview of the project, its features, installation instructions, and usage guidelines, making it easy for users to understand and contribute to the project.
+
 
 
