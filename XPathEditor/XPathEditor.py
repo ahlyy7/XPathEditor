@@ -1,20 +1,22 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import lxml.etree as ET
-import elementpath
+from csv import writer
 import csv
+import tkinter as tk
+from tkinter import ttk, filedialog
 import os
-from io import StringIO
 
-class XPathExtractor:
+from elementpath.xpath31 import XPath31Parser
+
+class XPathExtractorFramework:
     def __init__(self, root):
         self.root = root
-        self.root.title("XPath 数据提取器")
-        self.root.geometry("900x700")
+        self.root.title("XPath 数据提取器 (单表达式)")
+        self.root.geometry("900x750")
         
-        # 存储解析结果
-        self.results = []
-        self.tree = None
+        # 存储数据的变量
+        self.file_path = ""  # 文件路径
+        self.xpath_expression = ""  # XPath 表达式
+        self.results = []  # 提取的结果，可能是多维数组
+        self.column_count = 1  # 默认列数
         
         self.setup_ui()
         
@@ -27,39 +29,67 @@ class XPathExtractor:
         file_frame = ttk.LabelFrame(main_frame, text="文件选择", padding="10")
         file_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
-        self.file_path = tk.StringVar()
-        ttk.Entry(file_frame, textvariable=self.file_path, width=80).grid(row=0, column=0, padx=(0, 10))
+        self.file_path_var = tk.StringVar()
+        self.file_entry = ttk.Entry(file_frame, textvariable=self.file_path_var, width=80)
+        self.file_entry.grid(row=0, column=0, padx=(0, 10))
+        
+        # 浏览文件按钮 - 功能已实现
         ttk.Button(file_frame, text="浏览...", command=self.browse_file).grid(row=0, column=1)
         
         # XPath输入部分
-        xpath_frame = ttk.LabelFrame(main_frame, text="XPath 表达式 (每行一个)", padding="10")
+        xpath_frame = ttk.LabelFrame(main_frame, text="XPath 表达式 (输入一个完整的XPath表达式)", padding="10")
         xpath_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
         
-        self.xpath_text = tk.Text(xpath_frame, width=50, height=15)
+        self.xpath_text = tk.Text(xpath_frame, width=50, height=10)
         self.xpath_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # 添加示例XPath
-        self.add_example_xpaths()
+        # 添加XPath滚动条
+        xpath_scrollbar = ttk.Scrollbar(xpath_frame, orient="vertical", command=self.xpath_text.yview)
+        xpath_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.xpath_text.configure(yscrollcommand=xpath_scrollbar.set)
+        
+        # 列数输入部分
+        column_frame = ttk.Frame(xpath_frame)
+        column_frame.grid(row=1, column=0, pady=5, sticky=tk.W)
+        
+        ttk.Label(column_frame, text="列数:").pack(side=tk.LEFT, padx=(0, 5))
+        self.column_var = tk.StringVar(value="1")
+        self.column_spinbox = ttk.Spinbox(column_frame, from_=1, to=100, width=10, textvariable=self.column_var)
+        self.column_spinbox.pack(side=tk.LEFT)
+        
+        # 转换按钮
+        ttk.Button(column_frame, text="转换为二维数组", command=self.convert_to_2d_array, width=15).pack(side=tk.LEFT, padx=10)
+        
+        # 示例按钮
+        ttk.Button(xpath_frame, text="添加示例XPath", command=self.add_example_xpath).grid(row=2, column=0, pady=5)
         
         # 预览区
         preview_frame = ttk.LabelFrame(main_frame, text="预览结果", padding="10")
         preview_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # 创建表格
-        self.create_result_table(preview_frame)
-        
-        # 滚动条
-        scrollbar = ttk.Scrollbar(preview_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        # 创建带滚动条的文本框来显示结果
+        self.create_result_display(preview_frame)
         
         # 按钮区域
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=2, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="执行 XPath", command=self.execute_xpath, width=15).pack(side=tk.LEFT, padx=10)
-        ttk.Button(button_frame, text="导出 CSV", command=self.export_csv, width=15).pack(side=tk.LEFT, padx=10)
+        # 确定按钮 - 您需要实现执行逻辑
+        self.execute_btn = ttk.Button(button_frame, text="执行 XPath", command=self.execute_xpath, width=15)
+        self.execute_btn.pack(side=tk.LEFT, padx=10)
+        
+        # 导出按钮 - 您需要实现导出逻辑
+        self.export_btn = ttk.Button(button_frame, text="导出 CSV", command=self.export_csv, width=15)
+        self.export_btn.pack(side=tk.LEFT, padx=10)
+        
+        # 清空按钮
         ttk.Button(button_frame, text="清空", command=self.clear_all, width=15).pack(side=tk.LEFT, padx=10)
+        
+        # 状态栏
+        self.status_var = tk.StringVar()
+        self.status_var.set("就绪")
+        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
+        status_bar.grid(row=1, column=0, sticky=(tk.W, tk.E))
         
         # 配置网格权重
         main_frame.columnconfigure(1, weight=1)
@@ -69,43 +99,48 @@ class XPathExtractor:
         preview_frame.rowconfigure(0, weight=1)
         preview_frame.columnconfigure(0, weight=1)
         
-    def create_result_table(self, parent):
-        """创建结果表格"""
-        columns = ("#", "节点", "文本内容", "属性")
+    def create_result_display(self, parent):
+        """创建结果显示区域 - 使用文本框显示原始结果"""
+        # 创建一个Frame来包含文本框和滚动条
+        result_frame = ttk.Frame(parent)
+        result_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        self.tree = ttk.Treeview(parent, columns=columns, show="headings", height=20)
-        self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # 创建文本框
+        self.result_text = tk.Text(result_frame, width=60, height=25)
+        self.result_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # 设置列标题
-        self.tree.heading("#", text="序号")
-        self.tree.heading("节点", text="节点")
-        self.tree.heading("文本内容", text="文本内容")
-        self.tree.heading("属性", text="属性")
+        # 添加垂直滚动条
+        v_scrollbar = ttk.Scrollbar(result_frame, orient="vertical", command=self.result_text.yview)
+        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.result_text.configure(yscrollcommand=v_scrollbar.set)
         
-        # 设置列宽
-        self.tree.column("#", width=50, anchor=tk.CENTER)
-        self.tree.column("节点", width=150)
-        self.tree.column("文本内容", width=250)
-        self.tree.column("属性", width=200)
+        # 添加水平滚动条
+        h_scrollbar = ttk.Scrollbar(result_frame, orient="horizontal", command=self.result_text.xview)
+        h_scrollbar.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))
+        self.result_text.configure(xscrollcommand=h_scrollbar.set, wrap=tk.NONE)
         
-    def add_example_xpaths(self):
+        # 配置网格权重
+        result_frame.columnconfigure(0, weight=1)
+        result_frame.rowconfigure(0, weight=1)
+        
+    def add_example_xpath(self):
         """添加示例XPath表达式"""
         examples = [
             "//*",  # 所有元素
-            "//title",  # 所有title元素
-            "//@href",  # 所有href属性
-            "//a/text()",  # 所有a元素的文本
-            "//div[@class='content']",  # class为content的div
-            "//p[contains(@class, 'text')]",  # class包含text的p元素
-            "count(//*)",  # 元素总数
-            "//item[position() <= 5]"  # 前5个item元素
+            "//book/title/text()",  # 所有book下的title文本
+            "//book[@category='WEB']",  # category为WEB的book元素
+            "//book[price>35]/title",  # 价格大于35的book的title
+            "//book/title | //book/author",  # title和author元素的并集
+            "for $x in //book return concat($x/title, ': $', $x/price)",  # XPath 2.0示例
+            "for $b in //book return ($b/title, $b/price)",  # 返回序列的序列（二维）
+            "//book/(title, author, price)",  # 返回每个book的多个子元素，
         ]
         
-        for example in examples:
-            self.xpath_text.insert(tk.END, example + "\n")
+        self.xpath_text.delete("1.0", tk.END)
+        self.xpath_text.insert("1.0", examples[5])  # 默认添加一个XPath 2.0示例
         
     def browse_file(self):
-        """浏览文件"""
+        """浏览文件 - 功能已实现"""
         filetypes = [
             ("标记语言文件", "*.xml *.html *.htm *.xhtml"),
             ("XML文件", "*.xml"),
@@ -115,190 +150,211 @@ class XPathExtractor:
         
         filename = filedialog.askopenfilename(filetypes=filetypes)
         if filename:
-            self.file_path.set(filename)
-            self.load_file(filename)
-    
-    def load_file(self, filename):
-        """加载文件"""
-        try:
-            # 根据文件扩展名选择解析器
-            if filename.lower().endswith(('.html', '.htm')):
-                parser = ET.HTMLParser()
-            else:
-                parser = ET.XMLParser()
-            
-            self.tree = ET.parse(filename, parser)
-            messagebox.showinfo("成功", f"文件加载成功: {os.path.basename(filename)}")
-            
-        except Exception as e:
-            messagebox.showerror("错误", f"无法加载文件:\n{str(e)}")
+            self.file_path = filename
+            self.file_path_var.set(filename)
+            self.update_status(f"已选择文件: {os.path.basename(filename)}")
     
     def execute_xpath(self):
-        """执行XPath查询"""
-        # 检查文件是否加载
-        if not self.file_path.get():
-            messagebox.showwarning("警告", "请先选择文件")
+        """执行XPath查询 - 您需要实现此方法"""
+        # 获取文件路径
+        file_path = self.file_path_var.get()
+        if not file_path:
+            self.update_status("错误: 请先选择文件")
             return
             
-        if self.tree is None:
-            messagebox.showwarning("警告", "请先加载有效的XML/HTML文件")
+        # 获取XPath表达式（整个文本框内容作为一个表达式）
+        self.xpath_expression = self.xpath_text.get("1.0", tk.END).strip()
+        
+        if not self.xpath_expression:
+            self.update_status("错误: 请输入XPath表达式")
             return
+            
+        self.update_status("正在执行XPath查询...")
         
-        # 获取XPath表达式
-        xpaths = self.xpath_text.get("1.0", tk.END).strip().split('\n')
-        xpaths = [x.strip() for x in xpaths if x.strip()]
+        # 清空结果显示区域
+        self.result_text.delete("1.0", tk.END)
         
-        if not xpaths:
-            messagebox.showwarning("警告", "请输入XPath表达式")
-            return
+        # TODO: 在这里实现您的执行逻辑
+        # 使用 elementpath 执行 XPath 2.0 表达式
+        # 将结果存储在 self.results 中
+        # 在 result_text 中显示结果
         
-        # 清空表格
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        self.results = []
-        row_index = 1
-        
+        # 示例实现 - 请替换为您的实际代码
         try:
-            root = self.tree.getroot()
+            # 假设您已经安装了 elementpath 和 lxml
+            from lxml import etree
+            import elementpath
             
-            for xpath in xpaths:
-                try:
-                    # 使用elementpath执行XPath
-                    results = elementpath.select(root, xpath)
-                    
-                    if not results:
-                        # 如果没有结果，添加占位符
-                        self.results.append({
-                            'xpath': xpath,
-                            'results': [],
-                            'count': 0
-                        })
-                        continue
-                    
-                    # 处理结果
-                    xpath_results = []
-                    for i, result in enumerate(results):
-                        result_dict = {
-                            'index': row_index,
-                            'node': str(result.tag) if hasattr(result, 'tag') else type(result).__name__,
-                            'text': '',
-                            'attrs': ''
-                        }
-                        
-                        # 处理元素节点
-                        if hasattr(result, 'tag'):
-                            # 获取文本内容
-                            if result.text and result.text.strip():
-                                result_dict['text'] = result.text.strip()
-                            
-                            # 获取属性
-                            if result.attrib:
-                                attrs = ', '.join([f'{k}="{v}"' for k, v in result.attrib.items()])
-                                result_dict['attrs'] = attrs
-                            
-                            # 添加到表格
-                            self.tree.insert('', tk.END, values=(
-                                row_index,
-                                result.tag,
-                                result_dict['text'],
-                                result_dict['attrs']
-                            ))
-                            
-                        # 处理文本节点或属性
-                        elif isinstance(result, str):
-                            result_dict['node'] = 'Text/Attr'
-                            result_dict['text'] = result[:100]  # 限制长度
-                            
-                            self.tree.insert('', tk.END, values=(
-                                row_index,
-                                'Text/Attr',
-                                result[:100],
-                                ''
-                            ))
-                        
-                        xpath_results.append(result_dict)
-                        row_index += 1
-                    
-                    self.results.append({
-                        'xpath': xpath,
-                        'results': xpath_results,
-                        'count': len(xpath_results)
-                    })
-                    
-                except Exception as e:
-                    messagebox.showwarning("XPath错误", f"XPath表达式错误: {xpath}\n错误信息: {str(e)}")
+            # 加载文件
+            if file_path.lower().endswith(('.html', '.htm')):
+                parser = etree.HTMLParser()
+            else:
+                parser = etree.XMLParser()
+            tree = etree.parse(file_path, parser)
             
-            # 显示统计信息
-            total_results = sum(r['count'] for r in self.results)
-            messagebox.showinfo("完成", f"执行完成！\n共找到 {total_results} 个匹配项")
+            # 执行 XPath
+            self.results = elementpath.select(tree.getroot(), self.xpath_expression, parser=XPath31Parser)
+            
+            # 在文本框中显示结果
+            self.display_results(self.results)
+            
+            self.update_status(f"执行完成，结果类型: {type(self.results).__name__}")
             
         except Exception as e:
-            messagebox.showerror("错误", f"执行过程中发生错误:\n{str(e)}")
+            self.update_status(f"执行错误: {str(e)}")
+            # 在文本框中显示错误信息
+            self.result_text.insert("1.0", f"错误: {str(e)}")
+    
+    def display_results(self, results):
+        """在文本框中显示结果"""
+        if not results:
+            self.result_text.insert("1.0", "无结果")
+            return
+            
+        # 清空文本框
+        self.result_text.delete("1.0", tk.END)
+        
+        # 将结果转换为字符串显示
+        result_str = self.format_results(results)
+        self.result_text.insert("1.0", result_str)
+    
+    def format_results(self, results):
+        """格式化结果为字符串"""
+        # 处理不同类型的结果
+        if isinstance(results, list):
+            if len(results) == 0:
+                return "空列表"
+            
+            # 检查是否为二维数组
+            if all(isinstance(item, list) for item in results):
+                # 是二维数组
+                lines = []
+                for i, row in enumerate(results):
+                    # 将每行转换为字符串
+                    row_str = ", ".join(str(item) for item in row)
+                    lines.append(f"行 {i+1} ({len(row)}列): [{row_str}]")
+                return "\n".join(lines)
+            else:
+                # 是一维数组
+                items = [str(item) for item in results]
+                return f"结果列表 ({len(results)} 项):\n" + "\n".join([f"  {i+1}: {item}" for i, item in enumerate(items)])
+        elif isinstance(results, (str, int, float, bool)):
+            # 单个值
+            return f"单个结果: {results}"
+        else:
+            # 其他类型
+            return f"结果类型: {type(results).__name__}\n值: {str(results)}"
+    
+    def convert_to_2d_array(self):
+        """将一维数组转换为二维数组"""
+        if not hasattr(self, 'results') or not self.results:
+            self.update_status("错误: 没有数据可以转换，请先执行XPath查询")
+            return
+        
+        try:
+            # 获取列数
+            column_count = int(self.column_var.get())
+            if column_count <= 0:
+                self.update_status("错误: 列数必须大于0")
+                return
+                
+            # 检查当前结果是否已经是一维列表
+            if not isinstance(self.results, list):
+                self.update_status("错误: 结果不是列表类型，无法转换")
+                return
+                
+            # 检查是否为二维列表
+            if isinstance(self.results[0], list):
+                self.update_status("结果已经是二维数组")
+                return
+                
+            # 计算行数
+            total_items = len(self.results)
+            rows = total_items // column_count
+            if total_items % column_count != 0:
+                rows += 1
+                
+            # 转换为二维数组
+            converted_results = []
+            for i in range(rows):
+                start_idx = i * column_count
+                end_idx = min(start_idx + column_count, total_items)
+                row = self.results[start_idx:end_idx]
+                
+                # 如果行不满，用空字符串填充
+                if len(row) < column_count:
+                    row += [""] * (column_count - len(row))
+                    
+                converted_results.append(row)
+                
+            self.results = converted_results
+            self.display_results(self.results)
+            self.update_status(f"转换完成: {len(self.results)}行 × {column_count}列")
+            
+        except ValueError:
+            self.update_status("错误: 请输入有效的列数")
+        except Exception as e:
+            self.update_status(f"转换错误: {str(e)}")
     
     def export_csv(self):
-        """导出为CSV文件"""
-        if not self.results:
-            messagebox.showwarning("警告", "没有数据可以导出，请先执行XPath查询")
+        """导出为CSV - 您需要实现此方法"""
+        if not hasattr(self, 'results') or not self.results:
+            self.update_status("错误: 没有数据可以导出，请先执行XPath查询")
             return
         
-        # 选择保存位置
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".csv",
-            filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")]
-        )
+        self.update_status("正在导出数据...")
         
-        if not filename:
-            return
+        # TODO: 在这里实现您的导出逻辑
+        # 根据 self.results 的数据结构导出为 CSV
         
+        # 示例实现 - 请替换为您的实际代码
         try:
-            with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                
-                # 写入表头
-                writer.writerow(['序号', 'XPath表达式', '节点类型', '文本内容', '属性', '原始XPath'])
-                
-                # 写入数据
-                row_num = 1
-                for xpath_data in self.results:
-                    xpath = xpath_data['xpath']
-                    for result in xpath_data['results']:
-                        writer.writerow([
-                            row_num,
-                            result.get('node', ''),
-                            result.get('text', ''),
-                            result.get('attrs', ''),
-                            xpath
-                        ])
-                        row_num += 1
-                
-                # 写入统计信息
-                writer.writerow([])
-                writer.writerow(['统计信息'])
-                writer.writerow(['XPath表达式', '匹配数量'])
-                for xpath_data in self.results:
-                    writer.writerow([xpath_data['xpath'], xpath_data['count']])
+            filename = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")]
+            )
             
-            messagebox.showinfo("成功", f"数据已导出到:\n{filename}")
-            
+            if filename:
+                # 这里应该实现实际的CSV导出逻辑
+                # 由于 self.results 可能是多维数组，需要相应处理
+
+                with open(filename, 'w', newline='', encoding='utf-8') as file:
+                    writer = csv.writer(file)
+        
+                    # 检查results的维度
+                    if not self.results:
+                        return  # 空列表，不保存
+        
+                    # 检查是否为二维列表
+                    if isinstance(self.results[0], list):
+                        # 二维列表：直接写入多行
+                        writer.writerows(self.results)
+                    else:
+                        # 一维列表：写入单行
+                        for result in self.results:
+                            writer.writerow([result])
+                
+                self.update_status(f"数据已导出到: {filename}")
         except Exception as e:
-            messagebox.showerror("导出错误", f"无法导出文件:\n{str(e)}")
+            self.update_status(f"导出错误: {str(e)}")
     
     def clear_all(self):
         """清空所有内容"""
-        self.file_path.set("")
+        self.file_path_var.set("")
         self.xpath_text.delete("1.0", tk.END)
-        self.add_example_xpaths()
-        
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
+        self.result_text.delete("1.0", tk.END)
         self.results = []
-        self.tree = None
+        self.column_var.set("1")
+        self.update_status("已清空所有内容")
+    
+    def update_status(self, message):
+        """更新状态栏"""
+        self.status_var.set(message)
+        self.root.update_idletasks()
 
 def main():
     root = tk.Tk()
-    app = XPathExtractor(root)
+    app = XPathExtractorFramework(root)
     
     # 使窗口可调整大小
     root.columnconfigure(0, weight=1)
