@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>82c7e337-b01f-4993-a90f-6faf756a673d</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>XPathEditor.py</StartupFile>
+    <StartupFile>XPathEditorGUI.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="XPathEditor.py" />
+    <Compile Include="XPathEditorGUI.py" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
