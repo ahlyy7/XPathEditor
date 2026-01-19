@@ -5,6 +5,8 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 简体中文说明（zh-CN）
 
+## [使用说明必看！！！]https://github.com/ahlyy7/XPathEditor#%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E%E5%9F%BA%E7%A1%80%E7%A4%BA%E4%BE%8B
+
 ## 项目概述
 
 `XPathEditor` 是一个用于编辑、测试和调试 XPath 表达式的小型桌面/工具型项目。它结合了可视化编辑器、语法高亮、实时评估和示例文档，帮助开发者在 XML/HTML 文档上快速构建与验证 XPath 查询。
@@ -93,7 +95,7 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 - 将要查询的 XML/HTML 文档粘贴或加载到左侧面板，点击 `Evaluate` 或相应按钮查看匹配节点。
 
-- 支持导入/导出会话（在菜单或工具栏中查找 `Import` / `Export`）
+- 支持导入/导出会话（在菜单或工具栏中查找）
 
 ## 测试
 
@@ -132,6 +134,7 @@ Here’s an improved version of the README.md file that incorporates the new con
 
 
 This version maintains the original structure while integrating the new content seamlessly. It provides a clear overview of the project, its features, installation instructions, and usage guidelines, making it easy for users to understand and contribute to the project.
+
 
 
 
