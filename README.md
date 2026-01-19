@@ -14,8 +14,8 @@ Here’s an improved version of the README.md file that incorporates the new cont
 
 - 实时解析与评估 XPath 表达式
 - 支持 XML 与 HTML 文档
-- 语法高亮与结果高亮
-- 导入/导出示例与会话
+- 语法验证与结果显示
+- 导入/导出会话
 - 在 Windows 上与 Visual Studio 2022 兼容的构建与调试支持
 
 ## 先决条件
