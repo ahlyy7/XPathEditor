@@ -1,0 +1,52 @@
+NOTICE
+
+项目：XPathEditor
+项目许可证：MIT（详见 ./LICENSE）
+
+说明：
+本 NOTICE 文件列出仓库中检测到的第三方依赖及其常见许可类型，用于分发/合规参考。该清单基于仓库内可见文件头与常见分发习惯，可能不包含所有间接依赖或精确版本。发布前请逐项核对对应依赖的版本与许可证全文。
+
+检测到的第三方库（示例条目，请核对版本并补充）：
+
+1) lxml
+   - 用途：Python 与 libxml2/libxslt 的绑定
+   - 常见许可证：BSD（通常为 BSD-3-Clause）
+   - 参考位置：env/Lib/site-packages/lxml/
+   - 建议：检查 lxml 包的 metadata 或源码中的 LICENSE 文本以确认具体许可证与版权信息。
+
+2) libxml2
+   - 用途：XML 解析库
+   - 常见许可证：MIT / X11
+   - SPDX 标识：MIT
+   - 参考位置：env/Lib/site-packages/lxml/includes/libxml/
+
+3) libxslt / libexslt
+   - 用途：XSLT 处理库与扩展
+   - 常见许可证：MIT / X11
+   - SPDX 标识：MIT
+   - 参考位置：env/Lib/site-packages/lxml/includes/libxslt/、.../libexslt/
+
+4) zlib
+   - 用途：压缩库
+   - 许可证：zlib/libpng
+   - SPDX 标识：Zlib
+   - 参考位置：env/Lib/site-packages/lxml/includes/extlibs/（如 zconf.h）
+
+5) triodef / Trio 片段
+   - 用途：三方兼容/工具实现片段（见 triodef.h）
+   - 许可证：请参阅文件头；通常为宽松许可（如 ISC/BSD 风格）
+   - 参考位置：env/Lib/site-packages/lxml/includes/libxslt/triodef.h
+
+6) isoschematron / XSL 资源
+   - 用途：Schematron XSL 资源
+   - 许可证：视资源而定，请参阅资源目录内的 readme 或文件头
+   - 参考位置：env/Lib/site-packages/lxml/isoschematron/resources/...
+
+注意与建议：
+- 请用 `requirements.txt`、`pyproject.toml` 或 `pip freeze` 确认项目依赖列表并补充版本号。
+- 若打包分发时包含第三方源码或二进制，需在发布包中一并提供相应依赖的 LICENSE 文本或在 NOTICE 中明确引用来源与许可证。
+- 可将第三方许可证副本放置在 `third_party_licenses/` 目录，NOTICE 中引用具体文件路径以便合规审阅。
+
+若需，我可以：
+- 扫描 `requirements.txt` 或 `pyproject.toml` 并生成带版本号的 NOTICE 条目；
+- 收集每个依赖的 LICENSE 文本到 `third_party_licenses/` 并生成索引。

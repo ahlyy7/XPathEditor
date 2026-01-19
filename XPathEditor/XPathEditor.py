@@ -3,7 +3,6 @@ import csv
 import tkinter as tk
 from tkinter import ttk, filedialog
 import os
-
 from elementpath.xpath31 import XPath31Parser
 
 class XPathExtractorFramework:
@@ -60,9 +59,6 @@ class XPathExtractorFramework:
         # 转换按钮
         ttk.Button(column_frame, text="转换为二维数组", command=self.convert_to_2d_array, width=15).pack(side=tk.LEFT, padx=10)
         
-        # 示例按钮
-        ttk.Button(xpath_frame, text="添加示例XPath", command=self.add_example_xpath).grid(row=2, column=0, pady=5)
-        
         # 预览区
         preview_frame = ttk.LabelFrame(main_frame, text="预览结果", padding="10")
         preview_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -79,7 +75,7 @@ class XPathExtractorFramework:
         self.execute_btn.pack(side=tk.LEFT, padx=10)
         
         # 导出按钮 - 您需要实现导出逻辑
-        self.export_btn = ttk.Button(button_frame, text="导出 CSV", command=self.export_csv, width=15)
+        self.export_btn = ttk.Button(button_frame, text="导出文件", command=self.export_file, width=15)
         self.export_btn.pack(side=tk.LEFT, padx=10)
         
         # 清空按钮
@@ -123,22 +119,6 @@ class XPathExtractorFramework:
         result_frame.columnconfigure(0, weight=1)
         result_frame.rowconfigure(0, weight=1)
         
-    def add_example_xpath(self):
-        """添加示例XPath表达式"""
-        examples = [
-            "//*",  # 所有元素
-            "//book/title/text()",  # 所有book下的title文本
-            "//book[@category='WEB']",  # category为WEB的book元素
-            "//book[price>35]/title",  # 价格大于35的book的title
-            "//book/title | //book/author",  # title和author元素的并集
-            "for $x in //book return concat($x/title, ': $', $x/price)",  # XPath 2.0示例
-            "for $b in //book return ($b/title, $b/price)",  # 返回序列的序列（二维）
-            "//book/(title, author, price)",  # 返回每个book的多个子元素，
-        ]
-        
-        self.xpath_text.delete("1.0", tk.END)
-        self.xpath_text.insert("1.0", examples[5])  # 默认添加一个XPath 2.0示例
-        
     def browse_file(self):
         """浏览文件 - 功能已实现"""
         filetypes = [
@@ -155,7 +135,7 @@ class XPathExtractorFramework:
             self.update_status(f"已选择文件: {os.path.basename(filename)}")
     
     def execute_xpath(self):
-        """执行XPath查询 - 您需要实现此方法"""
+        """执行XPath查询"""
         # 获取文件路径
         file_path = self.file_path_var.get()
         if not file_path:
@@ -174,14 +154,7 @@ class XPathExtractorFramework:
         # 清空结果显示区域
         self.result_text.delete("1.0", tk.END)
         
-        # TODO: 在这里实现您的执行逻辑
-        # 使用 elementpath 执行 XPath 2.0 表达式
-        # 将结果存储在 self.results 中
-        # 在 result_text 中显示结果
-        
-        # 示例实现 - 请替换为您的实际代码
         try:
-            # 假设您已经安装了 elementpath 和 lxml
             from lxml import etree
             import elementpath
             
@@ -296,47 +269,118 @@ class XPathExtractorFramework:
         except Exception as e:
             self.update_status(f"转换错误: {str(e)}")
     
-    def export_csv(self):
-        """导出为CSV - 您需要实现此方法"""
+    def export_file(self):
+        """导出文件 - 支持多种格式"""
         if not hasattr(self, 'results') or not self.results:
             self.update_status("错误: 没有数据可以导出，请先执行XPath查询")
             return
         
+        # 定义支持的文件格式
+        filetypes = [
+            ("CSV文件", "*.csv"),
+            ("Excel文件 (XLSX)", "*.xlsx"),
+            ("Excel文件 (XLS)", "*.xls"),
+            ("所有文件", "*.*")
+        ]
+        
+        # 获取文件名
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=filetypes,
+            title="导出文件"
+        )
+        
+        if not filename:
+            return  # 用户取消了保存
+        
         self.update_status("正在导出数据...")
         
-        # TODO: 在这里实现您的导出逻辑
-        # 根据 self.results 的数据结构导出为 CSV
-        
-        # 示例实现 - 请替换为您的实际代码
         try:
-            filename = filedialog.asksaveasfilename(
-                defaultextension=".csv",
-                filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")]
-            )
+            # 根据文件扩展名选择导出方法
+            file_ext = os.path.splitext(filename)[1].lower()
             
-            if filename:
-                # 这里应该实现实际的CSV导出逻辑
-                # 由于 self.results 可能是多维数组，需要相应处理
-
-                with open(filename, 'w', newline='', encoding='utf-8') as file:
-                    writer = csv.writer(file)
-        
-                    # 检查results的维度
-                    if not self.results:
-                        return  # 空列表，不保存
-        
-                    # 检查是否为二维列表
-                    if isinstance(self.results[0], list):
-                        # 二维列表：直接写入多行
-                        writer.writerows(self.results)
-                    else:
-                        # 一维列表：写入单行
-                        for result in self.results:
-                            writer.writerow([result])
-                
-                self.update_status(f"数据已导出到: {filename}")
+            if file_ext == '.csv':
+                self.export_to_csv(filename)
+            elif file_ext == '.xlsx':
+                self.export_to_excel_xlsx(filename)
+            elif file_ext == '.xls':
+                self.export_to_excel_xls(filename)
+            else:
+                # 默认使用CSV格式
+                self.export_to_csv(filename)
+            
+            self.update_status(f"数据已导出到: {filename}")
+            
+        except ImportError as e:
+            self.update_status(f"导出错误: 缺少必要的库。请安装: {str(e)}")
         except Exception as e:
             self.update_status(f"导出错误: {str(e)}")
+    
+    def export_to_csv(self, filename):
+        """导出为CSV格式"""
+        with open(filename, 'w', newline='', encoding='utf-8-sig') as file:
+            writer = csv.writer(file)
+            
+            # 检查results的维度
+            if not self.results:
+                return  # 空列表，不保存
+            
+            # 检查是否为二维列表
+            if isinstance(self.results[0], list):
+                # 二维列表：直接写入多行
+                writer.writerows(self.results)
+            else:
+                # 一维列表：写入单行
+                writer.writerow(self.results)
+    
+    def export_to_excel_xlsx(self, filename):
+        """导出为XLSX格式"""
+        try:
+            import openpyxl
+        except ImportError:
+            raise ImportError("openpyxl")
+        
+        # 创建工作簿和工作表
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "XPath结果"
+        
+        # 写入数据
+        if isinstance(self.results[0], list):
+            # 二维列表
+            for row in self.results:
+                ws.append(row)
+        else:
+            # 一维列表
+            ws.append(self.results)
+        
+        # 保存文件
+        wb.save(filename)
+    
+    def export_to_excel_xls(self, filename):
+        """导出为XLS格式"""
+        try:
+            import xlwt
+        except ImportError:
+            raise ImportError("xlwt")
+        
+        # 创建工作簿和工作表
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("XPath结果")
+        
+        # 写入数据
+        if isinstance(self.results[0], list):
+            # 二维列表
+            for row_idx, row in enumerate(self.results):
+                for col_idx, value in enumerate(row):
+                    ws.write(row_idx, col_idx, str(value))
+        else:
+            # 一维列表
+            for col_idx, value in enumerate(self.results):
+                ws.write(0, col_idx, str(value))
+        
+        # 保存文件
+        wb.save(filename)
     
     def clear_all(self):
         """清空所有内容"""
