@@ -93,6 +93,39 @@ Here’s an improved version of the README.md file that incorporates the new con
            return ($price/text(), $book/title/text())
      )
   ```
+
+
+- 支持命名空间，例如：
+  
+  使用如下命名空间映射：
+
+  命名空间映射框填入：
+  
+  ```namespaces
+  ns=http://github.com/ahlyy7/XPathEditor/ns
+  ```
+  
+
+  XPath 表达式框填入：
+
+  ```xpath
+  //ns:book/ns:price/text()
+  ```
+
+  也可使用 XPath 3.1 提供的灵活的机制来处理 XML 命名空间：
+  
+  使用通配符匹配：
+  
+  ```xpath
+  //*:book/*:price/text()
+  ```
+
+
+  使用 URI 限定符：
+
+  ```xpath
+  //Q{http://github.com/ahlyy7/XPathEditor/ns}book/Q{http://github.com/ahlyy7/XPathEditor/ns}price/text()
+  ```
   
 
 - 将要查询的 XML/HTML 文档加载后，点击 `执行 XPath` 或相应按钮查看匹配结果。
