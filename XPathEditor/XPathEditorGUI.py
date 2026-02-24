@@ -1,4 +1,3 @@
-from csv import writer
 import csv
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -50,6 +49,17 @@ class XPathExtractorFramework:
         # 列数输入部分
         column_frame = ttk.Frame(xpath_frame)
         column_frame.grid(row=1, column=0, pady=5, sticky=tk.W)
+        
+        # 命名空间输入部分（新增）
+        ns_frame = ttk.LabelFrame(xpath_frame, text="命名空间映射 (每行格式: 前缀=URI)", padding="5")
+        ns_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        
+        self.ns_text = tk.Text(ns_frame, width=50, height=4)
+        self.ns_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        ns_scrollbar = ttk.Scrollbar(ns_frame, orient="vertical", command=self.ns_text.yview)
+        ns_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.ns_text.configure(yscrollcommand=ns_scrollbar.set)
         
         ttk.Label(column_frame, text="列数:").pack(side=tk.LEFT, padx=(0, 5))
         self.column_var = tk.StringVar(value="1")
@@ -165,8 +175,10 @@ class XPathExtractorFramework:
                 parser = etree.XMLParser()
             tree = etree.parse(file_path, parser)
             
+            namespaces = self.parse_namespaces()  # 新增
+            
             # 执行 XPath
-            self.results = elementpath.select(tree.getroot(), self.xpath_expression, parser=XPath31Parser)
+            self.results = elementpath.select(tree.getroot(), self.xpath_expression, namespaces, XPath31Parser)
             
             # 在文本框中显示结果
             self.display_results(self.results)
@@ -390,11 +402,35 @@ class XPathExtractorFramework:
         self.results = []
         self.column_var.set("1")
         self.update_status("已清空所有内容")
+        self.ns_text.delete("1.0", tk.END)  # 新增清空
     
     def update_status(self, message):
         """更新状态栏"""
         self.status_var.set(message)
         self.root.update_idletasks()
+
+    def parse_namespaces(self):
+        """解析命名空间输入，返回 {前缀: URI} 字典"""
+        ns_dict = {}
+        ns_input = self.ns_text.get("1.0", tk.END).strip()
+        if not ns_input:
+            return ns_dict
+
+        for line in ns_input.splitlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue  # 允许注释行（以#开头）
+            if '=' not in line:
+                self.update_status(f"警告: 忽略格式错误的命名空间行: {line}")
+                continue
+            prefix, uri = line.split('=', 1)
+            prefix = prefix.strip()
+            uri = uri.strip()
+            if prefix and uri:
+                ns_dict[prefix] = uri
+            else:
+                self.update_status(f"警告: 前缀或URI为空，已忽略: {line}")
+        return ns_dict
 
 def main():
     root = tk.Tk()
